@@ -120,15 +120,16 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                 //we can use a nearest neighbor implementation like this:
                 //float val = volume.getVoxelNN(pixelCoord);
                 //you have also the function getVoxelLinearInterpolated in Volume.java          
-                float val2 = (int) volume.getVoxelLinearInterpolate(pixelCoord);
+               
+                 val = (int) volume.getVoxelLinearInterpolate(pixelCoord);
 
                 //you have to implement this function below to get the cubic interpolation
-                val = (int) volume.getVoxelTriCubicInterpolate(pixelCoord);
+                //val = (int) volume.getVoxelTriCubicInterpolate(pixelCoord);
 
-                if (val != val2 && val == 0) {
+               /* if (val != val2 && val == 0) {
                     System.out.println(val + " | " + val2);
                     System.out.println(pixelCoord[0] + "," + pixelCoord[1] + "," + pixelCoord[2]);
-                }
+                }*/
 
                 // Map the intensity to a grey value by linear scaling
                 pixelColor.r = (val / max);
@@ -303,7 +304,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
             voxel_color.a = 1;
             opacity = 1;
             
-            voxel_color=computePhongShading(voxel_color, getGradiant() , lightVector, rayVector );
+            voxel_color=computePhongShading(voxel_color, this.gradients.getGradient(currentPos) , lightVector, rayVector );
             
             //falta coords
         }

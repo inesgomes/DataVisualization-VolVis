@@ -206,7 +206,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         //We define the light vector as directed toward the view point (which is the source of the light)
         // another light vector would be possible
         VectorMath.setVector(lightVector, rayVector[0] * sampleStep, rayVector[1] * sampleStep, rayVector[2] * sampleStep);
-
+        
         // To be Implemented
         //Initialization of the colors as floating point values
         double r, g, b;
@@ -225,10 +225,10 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         double[] currentPos = new double[3];
         VectorMath.setVector(currentPos, entryPoint[0], entryPoint[1], entryPoint[2]);
 
-        double[] indexes = new double[nrSamples];
-        int k = 0;
+        double[] indexes = new double[nrSamples];                                   // we aren't using this!!!!!      
+        int k = 0;                                                                  //or this
         do {
-            double value = volume.getVoxelLinearInterpolate(currentPos); 
+            double value = volume.getVoxelLinearInterpolate(currentPos);            
             if (value > iso_value) {
                 //indexes[k] = value;
                 //k++;
@@ -236,9 +236,9 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                 
             }
             for (int i = 0; i < 3; i++) {
-                currentPos[i] += lightVector[i];
+                currentPos[i] += lightVector[i];                                  //update currentPos (it follows lightVector)
             }
-            nrSamples--;
+            nrSamples--;                                              
         } while (nrSamples > 0);
         
         //System.out.println(indexes.length);
@@ -273,6 +273,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         //the light vector is directed toward the view point (which is the source of the light)
         // another light vector would be possible 
         VectorMath.setVector(lightVector, rayVector[0], rayVector[1], rayVector[2]);
+        
 
         //Initialization of the colors as floating point values
         double r, g, b;
@@ -307,6 +308,10 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
             voxel_color.b = 1;
             voxel_color.a = 1;
             opacity = 1;
+            
+            voxel_color=computePhongShading(voxel_color, getGradiant() , lightVector, rayVector );
+            
+            //falta coords
         }
 
         r = voxel_color.r;
@@ -327,7 +332,26 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
             double[] rayVector) {
 
         // To be implemented 
-        TFColor color = new TFColor(0, 0, 0, 1);
+       
+        // Material color == voxel_color
+        // Material property k, alfa
+        double ka=0.1;
+        double kd=0.7;
+        double ks=0.2;
+        int alfa=100;
+        
+        
+              //falta cos
+      
+        double cos1= (lightVector[0]*rayVector[0]+lightVector[1]*rayVector[1]+lightVector[2]*rayVector[2]);
+        cos1= cos1/(Math.sqrt(Math.pow(lightVector[0],2)+Math.pow(lightVector[1],2)+Math.pow(lightVector[2],2))*Math.sqrt(Math.pow(gradient.x,2)+Math.pow(gradient.y,2)+Math.pow(gradient.z,2))) ;
+        
+        double cos2=(lightVector[0]*rayVector[0]+lightVector[1]*rayVector[1]+lightVector[2]*rayVector[2]); 
+        cos2= cos2/(Math.sqrt(Math.pow(lightVector[0],2)+Math.pow(lightVector[1],2)+Math.pow(lightVector[2],2))*Math.sqrt(Math.pow(rayVector[0],2)+Math.pow(rayVector[1],2)+Math.pow(rayVector[2],2))) ;
+        
+        
+        
+        TFColor color = new TFColor(lightVector[0]*ka*voxel_color.r,  lightVector[1]*kd*voxel_color.g*cos1, lightVector[2]*ks*voxel_color.b*Math.pow(cos2,alfa), 1);
 
         return color;
     }

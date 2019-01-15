@@ -288,12 +288,18 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         }    
         if (tf2dMode) {
              // 2D transfer function 
-            voxel_color.r = 0;voxel_color.g =1;voxel_color.b =0;voxel_color.a =1;
-            opacity = 1;      
+            voxel_color.r = 0;
+            voxel_color.g = 1;
+            voxel_color.b = 0;
+            voxel_color.a = 1;
+            opacity = this.computeOpacity2DTF(alpha, alpha, opacity, opacity);      
         }
         if (shadingMode) {
             // Shading mode on
-            voxel_color.r = 1;voxel_color.g =0;voxel_color.b =1;voxel_color.a =1;
+            voxel_color.r = 1;
+            voxel_color.g = 0;
+            voxel_color.b = 1;
+            voxel_color.a = 1;
             opacity = 1;     
         }
             
@@ -422,15 +428,17 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
 // triangle widget tFunc2D contains the values of the baseintensity and radius
 // tFunc2D.baseIntensity, tFunc2D.radius they are in image intensity units
 
-public double computeOpacity2DTF(double material_value, double material_r,
+    public double computeOpacity2DTF(double material_value, double material_r,
         double voxelValue, double gradMagnitude) {
+        
+        double opacity = 0.0;
+        double triangle_rad = gradMagnitude/173.1*tFunc2D.radius;
+        
+        if(material_r<triangle_rad)
+            opacity = 0.5;    
 
-    double opacity = 0.0;
-
-    // to be implemented
-    
-    return opacity;
-}  
+        return opacity;
+    }  
 
   //////////////////////////////////////////////////////////////////////
   //////////////////////////////////////////////////////////////////////

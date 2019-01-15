@@ -76,7 +76,7 @@ public class Volume {
     }
 
 
-    float a= 0.0f; // global variable that defines the value of a used in cubic interpolation.
+    float a= -0.5f; // global variable that defines the value of a used in cubic interpolation.
     // you need to chose the right value
         
     //////////////////////////////////////////////////////////////////////
@@ -100,12 +100,30 @@ public class Volume {
     // factor contains the distance from the value g1 to the position we want to interpolate to.
     // We assume the out of bounce checks have been done earlier
     
+    private float convolution(int i, float x){
+             
+        float absX = Math.abs(x-i);
+        float res = 0.0f;
+      
+        if(absX <= 1){
+            res= (float) ((a+2)*Math.pow(absX,3) - (a+3)*Math.pow(absX,2)+1);
+        }
+        else if (absX <= 2){
+            res =  (float) (a*Math.pow(absX,3)-5*a*Math.pow(absX,2)+8*a*absX-4*a);
+        }
+              
+        return res;
+    }
+    
     private float cubicinterpolate(float g0, float g1, float g2, float g3, float factor) {
-       
-        // to be implemented              
-        
-        float result = 1.0f;
-                            
+              
+        float result = 0.0f;
+        float[] points = {g0, g1, g2, g3};
+      
+        for(int i = 0; i < points.length; i++){
+            result += points[i]*convolution(i-1,factor);
+        }           
+                    
         return result; 
     }
         
@@ -115,13 +133,25 @@ public class Volume {
     // 2D cubic interpolation implemented here. We do it for plane XY. Coord contains the position.
     // We assume the out of bounce checks have been done earlier
     private float bicubicinterpolateXY(double[] coord,int z) {
-            
-        // to be implemented              
+                   
+        float x0,x1,x2,x3;
         
-        float result = 1.0f;
-                            
-        return result; 
-
+        int x = (int) Math.floor(coord[0]); 
+        int y = (int) Math.floor(coord[1]);
+        
+        float deltaX = (float) (coord[0] - x);
+        float deltaY = (float) (coord[1] - y);
+           
+        //
+        x0 = cubicinterpolate((float)getVoxel(x-1, y-1, z),(float)getVoxel(x, y-1, z), (float) getVoxel(x+1, y-1, z),(float) getVoxel(x+2, y-1, z), deltaX);
+        x1 = cubicinterpolate((float)getVoxel(x-1, y, z),(float)getVoxel(x, y, z), (float) getVoxel(x+1, y, z),(float) getVoxel(x+2, y, z), deltaX);
+        //if(x == 0)  x0 = x1;
+        x2 = cubicinterpolate((float)getVoxel(x-1, y+1, z),(float)getVoxel(x, y+1, z), (float) getVoxel(x+1, y+1, z),(float) getVoxel(x+2, y+1, z), deltaX);
+        x3 = cubicinterpolate((float)getVoxel(x-1, y+2, z),(float)getVoxel(x, y+2, z), (float) getVoxel(x+1, y+2, z),(float) getVoxel(x+2, y+2, z), deltaX);
+        
+        //
+        
+        return cubicinterpolate(x0, x1, x2, x3, deltaY);
     }
             
     //////////////////////////////////////////////////////////////////////
@@ -134,14 +164,29 @@ public class Volume {
                 || coord[2] < 1 || coord[2] > (dimZ-3)) {
             return 0;
         }
-       
-
-        // to be implemented              
-        float result = 1.0f;
-                            
-        return result; 
         
-
+        int z = (int) Math.floor(coord[2]); 
+        float deltaZ = (float) (coord[2] - z);
+        float y0, y1, y2, y3;
+       
+        //when z is the first coord
+        //if(z == 0) y0 = y1;
+        y0 = bicubicinterpolateXY(coord, z-1);
+        y1 = bicubicinterpolateXY(coord, z);
+        y2 = bicubicinterpolateXY(coord, z+1);
+        y3 = bicubicinterpolateXY(coord, z+2);
+       
+        float zf = cubicinterpolate(y0,y1,y2,y3,deltaZ);
+        
+        //System.out.println("t: "+zf);
+        if(zf < 0) {
+            return 0;
+        }
+        if(zf > 255){
+            return 255;
+        }
+        
+        return zf;
     }
 
 

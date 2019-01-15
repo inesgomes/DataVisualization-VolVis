@@ -120,15 +120,16 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                 //we can use a nearest neighbor implementation like this:
                 //float val = volume.getVoxelNN(pixelCoord);
                 //you have also the function getVoxelLinearInterpolated in Volume.java          
-                float val2 = (int) volume.getVoxelLinearInterpolate(pixelCoord);
+                //float val2 = (int) volume.getVoxelLinearInterpolate(pixelCoord);
 
                 //you have to implement this function below to get the cubic interpolation
                 val = (int) volume.getVoxelTriCubicInterpolate(pixelCoord);
 
+                /*
                 if (val != val2 && val == 0) {
                     System.out.println(val + " | " + val2);
                     System.out.println(pixelCoord[0] + "," + pixelCoord[1] + "," + pixelCoord[2]);
-                }
+                }*/
 
                 // Map the intensity to a grey value by linear scaling
                 pixelColor.r = (val / max);
@@ -284,10 +285,30 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         
         if (compositingMode) {
             // 1D transfer function 
-            voxel_color = computeCompositing(currentPos,lightVector,rayVector,nrSamples);
+            double mean = 0;
+            double finalNrSamples = nrSamples;
+            do {
+                double value = volume.getVoxelLinearInterpolate(currentPos) / 255.;
+                mean += value;
+                        
+                for (int i = 0; i < 3; i++) {
+                    currentPos[i] += lightVector[i];
+                }
+                
+                nrSamples--;
+            } while (nrSamples > 0);
+            
+            voxel_color.r = mean/finalNrSamples;
+            voxel_color.g = mean/finalNrSamples;
+            voxel_color.b = mean/finalNrSamples;
+            
+            if(mean > 0)    opacity = 1;
+            
         }
         
         if (tf2dMode) {
+            //TODO ciclo recursivo
+            
             // 2D transfer function 
             voxel_color.r = this.tFunc2D.color.r;   
             voxel_color.g = this.tFunc2D.color.g;
@@ -295,6 +316,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
             //opacity = this.computeOpacity2DTF(xxxx, yyyy, value, zzzz);
             opacity = 1;
         }
+        
         if (shadingMode) {
             // Shading mode on
             voxel_color.r = 1;
@@ -323,22 +345,29 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
      * @param nrSamples
      * @return 
      */
-    TFColor computeCompositing(double[] currentPos, double[] lightVector, double[] rayVector, int nrSamples) {
+    double computeCompositing(double[] currentPos, double[] lightVector, int nrSamples) {
 
+        if(nrSamples < 0){
+            return 1;
+        }
+        
+        //emitted color
         int value = (int) volume.getVoxelLinearInterpolate(currentPos);
+        TFColor color = this.tFunc.getColor(value);
+        double c = computeImageColor(color.r,color.g,color.b,color.a);
         
-        
+        //next position
         for (int i = 0; i < 3; i++) {
             currentPos[i] += lightVector[i];
         }
         
-        //nrSamples--;
-       
-        //return computeCompositing(...);
+        //next
+        nrSamples--;       
         
-        TFColor color = new TFColor(0, 0, 0, 1);
-
-        return color;
+        //calculation       
+        double res = c +(1-color.a)*computeCompositing(currentPos,lightVector,nrSamples);
+        
+        return res;
     }
 
     //////////////////////////////////////////////////////////////////////

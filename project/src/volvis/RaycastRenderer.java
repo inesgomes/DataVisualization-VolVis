@@ -119,14 +119,13 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                 //we now have to get the value for the in the 3D volume for the pixel
                 //we can use a nearest neighbor implementation like this:
                 //float val = volume.getVoxelNN(pixelCoord);
-                //you have also the function getVoxelLinearInterpolated in Volume.java          
-                //float val2 = (int) volume.getVoxelLinearInterpolate(pixelCoord);
-
+                //you have also the function getVoxelLinearInterpolated in Volume.java                     
+                 val = (int) volume.getVoxelLinearInterpolate(pixelCoord);
                 //you have to implement this function below to get the cubic interpolation
-                val = (int) volume.getVoxelTriCubicInterpolate(pixelCoord);
+                //val = (int) volume.getVoxelTriCubicInterpolate(pixelCoord);
 
-                /*
-                if (val != val2 && val == 0) {
+               /* if (val != val2 && val == 0) {
+
                     System.out.println(val + " | " + val2);
                     System.out.println(pixelCoord[0] + "," + pixelCoord[1] + "," + pixelCoord[2]);
                 }*/
@@ -207,7 +206,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         //We define the light vector as directed toward the view point (which is the source of the light)
         // another light vector would be possible
         VectorMath.setVector(lightVector, rayVector[0] * sampleStep, rayVector[1] * sampleStep, rayVector[2] * sampleStep);
-
+        
         // To be Implemented
         //Initialization of the colors as floating point values
         double r, g, b;
@@ -225,14 +224,14 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         VectorMath.setVector(currentPos, entryPoint[0], entryPoint[1], entryPoint[2]);
 
         do {
-            double value = volume.getVoxelLinearInterpolate(currentPos); 
+            double value = volume.getVoxelLinearInterpolate(currentPos);            
             if (value > iso_value) {
                 alpha = 1;
             }
             for (int i = 0; i < 3; i++) {
-                currentPos[i] += lightVector[i];
+                currentPos[i] += lightVector[i];                                  //update currentPos (it follows lightVector)
             }
-            nrSamples--;
+            nrSamples--;                                              
         } while (nrSamples > 0);
         
         //System.out.println(indexes.length);
@@ -323,7 +322,10 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
             voxel_color.b = 1;
             voxel_color.a = 1;
             opacity = 1;
-            //chamar o phong
+            
+            voxel_color=computePhongShading(voxel_color, this.gradients.getGradient(currentPos),lightVector, rayVector );
+            
+            //falta coords
         }
         
         r = voxel_color.r;
@@ -377,7 +379,26 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
             double[] rayVector) {
 
         // To be implemented 
-        TFColor color = new TFColor(0, 0, 0, 1);
+       
+        // Material color == voxel_color
+        // Material property k, alfa
+        double ka=0.1;
+        double kd=0.7;
+        double ks=0.2;
+        int alfa=100;
+        
+        
+              //falta cos
+      
+        double cos1= (lightVector[0]*rayVector[0]+lightVector[1]*rayVector[1]+lightVector[2]*rayVector[2]);
+        cos1= cos1/(Math.sqrt(Math.pow(lightVector[0],2)+Math.pow(lightVector[1],2)+Math.pow(lightVector[2],2))*Math.sqrt(Math.pow(gradient.x,2)+Math.pow(gradient.y,2)+Math.pow(gradient.z,2))) ;
+        
+        double cos2=(lightVector[0]*rayVector[0]+lightVector[1]*rayVector[1]+lightVector[2]*rayVector[2]); 
+        cos2= cos2/(Math.sqrt(Math.pow(lightVector[0],2)+Math.pow(lightVector[1],2)+Math.pow(lightVector[2],2))*Math.sqrt(Math.pow(rayVector[0],2)+Math.pow(rayVector[1],2)+Math.pow(rayVector[2],2))) ;
+        
+        
+        
+        TFColor color = new TFColor(lightVector[0]*ka*voxel_color.r,  lightVector[1]*kd*voxel_color.g*cos1, lightVector[2]*ks*voxel_color.b*Math.pow(cos2,alfa), 1);
 
         return color;
     }

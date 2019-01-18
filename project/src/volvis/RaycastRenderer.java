@@ -293,7 +293,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
             voxel_color.g = this.tFunc2D.color.g;
             voxel_color.b = this.tFunc2D.color.b;
             //opacity = this.computeOpacity2DTF(xxxx, yyyy, value, zzzz);
-            opacity = 1;
+            opacity = this.computeOpacity2DTF(alpha, alpha, opacity, opacity);
         }
         if (shadingMode) {
             // Shading mode on
@@ -449,21 +449,48 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
 // Compute the opacity based on the value of the pixel and the values of the
 // triangle widget tFunc2D contains the values of the baseintensity and radius
 // tFunc2D.baseIntensity, tFunc2D.radius they are in image intensity units
-    public double computeOpacity2DTF(double material_value, double material_r,
-            double voxelValue, double gradMagnitude) {
 
-    public double computeOpacity2DTF(double material_value, double material_r,
+    /*public double computeOpacity2DTF(double material_value, double material_r,
         double voxelValue, double gradMagnitude) {
         
         double opacity = 0.0;
-        double triangle_rad = gradMagnitude/173.1*tFunc2D.radius;
+        double TriRad = voxelValue*material_r/173.1;
         
-        if(material_r<triangle_rad)
+        double voxelRad = 0.0;
+        
+        if(voxelValue>material_value)
+            voxelRad = voxelValue - material_value;
+        else 
+            voxelRad = material_value - voxelValue;
+        
+        if(voxelRad<TriRad)
             opacity = 0.5;    
 
         return opacity;
-    }  
+    }*/  
+    
+    
+public double computeOpacity2DTF(double material_value, double material_r,
+        double voxelValue, double gradMagnitude) {
+        
+        double opacity = 0.0;
+        double TriRad = voxelValue*material_r/173.1;
+        //y=-mx+b ---> opacity=-(1/TriRad)*voxelRad+1
+        double voxelRad = 0.0;
+        
+        if(voxelValue>material_value)
+            voxelRad = voxelValue - material_value;
+        else 
+            voxelRad = material_value - voxelValue;
+        
+        if(voxelRad<TriRad)
+            opacity = 0.5;    
 
+        /*if(voxelRad<TriRad)
+            opacity = -(1/TriRad) * voxelRad + 1;*/
+        
+        return opacity;
+    }
     //////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////

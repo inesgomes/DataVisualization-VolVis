@@ -281,6 +281,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         TFColor voxel_color = new TFColor();
 
         // 1D transfer function 
+        /*
         double mean = 0;
         double finalNrSamples = nrSamples;
 
@@ -295,15 +296,19 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
             }
 
             nrSamples--;
-        } while (nrSamples > 0);
+        } while (nrSamples > 0);*/
 
         //INES
         if (compositingMode) {
-            voxel_color.r = mean / finalNrSamples;
-            voxel_color.g = mean / finalNrSamples;
-            voxel_color.b = mean / finalNrSamples;
+            VectorMath.setVector(currentPos, exitPoint[0], exitPoint[1], exitPoint[2]);
+            double c = computeCompositing(currentPos,lightVector,nrSamples);
+            //System.out.println(c/nrSamples);
+            voxel_color.r = c;
+            voxel_color.g = c;
+            voxel_color.b = c;
 
-            if (mean > 0)   opacity = 1;
+            if (c > 0)   opacity = 1;
+            
         }
         //RISCAS
         if (tf2dMode) {
@@ -347,27 +352,26 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
      * @return
      */
     double computeCompositing(double[] currentPos, double[] lightVector, int nrSamples) {
-
         if (nrSamples < 0) {
-            return 1;
+            return 0;
         }
 
         //emitted color
         int value = (int) volume.getVoxelLinearInterpolate(currentPos);
+        
         TFColor color = this.tFunc.getColor(value);
-        double c = computeImageColor(color.r, color.g, color.b, color.a);
 
         //next position
         for (int i = 0; i < 3; i++) {
-            currentPos[i] += lightVector[i];
+            currentPos[i] -= lightVector[i];
         }
 
         //next
         nrSamples--;
 
-        //calculation       
-        double res = c + (1 - color.a) * computeCompositing(currentPos, lightVector, nrSamples);
-
+        //calculation
+        double res = color.a*color.r + (1 - color.a) * computeCompositing(currentPos, lightVector, nrSamples);
+        //System.out.println(color.r + " , "+ color.a + " , " +res);
         return res;
     }
 

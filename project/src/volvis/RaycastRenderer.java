@@ -231,9 +231,17 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                 currentPos[i] += lightVector[i];                                  //update currentPos (it follows lightVector)
             }
             nrSamples--;
-        } while (nrSamples > 0);
-
-        //System.out.println(indexes.length);
+        } while (nrSamples > 0);      
+        
+        if (shadingMode) {
+            TFColor voxel_color = new TFColor(r,g,b,alpha);
+            voxel_color = computePhongShading(voxel_color, this.gradients.getGradient(entryPoint), lightVector, rayVector);
+            r = voxel_color.r;
+            g = voxel_color.g;
+            b = voxel_color.b;
+            alpha = voxel_color.a;
+        }
+        
         // isoColor contains the isosurface color from the interface
         //computes the color
         int color = computeImageColor(r, g, b, alpha);

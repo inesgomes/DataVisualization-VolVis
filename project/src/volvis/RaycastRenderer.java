@@ -303,7 +303,6 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
             voxel_color.b = mean/finalNrSamples;
             
             if(mean > 0)    opacity = 1;
-            
         }
         
         if (tf2dMode) {

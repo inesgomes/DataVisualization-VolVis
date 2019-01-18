@@ -281,46 +281,32 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         TFColor voxel_color = new TFColor();
 
         // 1D transfer function 
-        /*
-        double mean = 0;
-        double finalNrSamples = nrSamples;
-
-        do {
-            int value = (int) volume.getVoxelLinearInterpolate(currentPos);
-            if (compositingMode) {
-                double valueCM = value / 255.;
-                mean += valueCM;
-            }
-
-            if (tf2dMode) {
-                // 2D transfer function 
-                voxel_color.r = this.tFunc2D.color.r;
-                voxel_color.g = this.tFunc2D.color.g;
-                voxel_color.b = this.tFunc2D.color.b;
-                //opacity = this.computeOpacity2DTF(xxxx, yyyy, value, zzzz);
-                opacity = this.computeOpacity2DTF(tFunc2D.baseIntensity, tFunc2D.radius, value, this.gradients.getGradient(currentPos).mag);
-            }
-
-            for (int i = 0; i < 3; i++) {
-                currentPos[i] += lightVector[i];
-            }
-
-            nrSamples--;
-        } while (nrSamples > 0);*/
-
         //INES
         if (compositingMode) {
             VectorMath.setVector(currentPos, exitPoint[0], exitPoint[1], exitPoint[2]);
-            double c = computeCompositing(currentPos,lightVector,nrSamples);
+            double c = computeCompositing1D(currentPos, lightVector, nrSamples);
             //System.out.println(c/nrSamples);
             voxel_color.r = c;
             voxel_color.g = c;
             voxel_color.b = c;
 
-            if (c > 0)   opacity = 1;
-            
+            if (c > 0) {
+                opacity = 1;
+            }
+
         }
         //RISCAS
+        if (tf2dMode) {
+            VectorMath.setVector(currentPos, exitPoint[0], exitPoint[1], exitPoint[2]);
+            double c = computeCompositing2D(currentPos, lightVector, nrSamples);
+            //System.out.println(c);
+            // 2D transfer function 
+            voxel_color.r = this.tFunc2D.color.r;
+            voxel_color.g = this.tFunc2D.color.g;
+            voxel_color.b = this.tFunc2D.color.b;
+            //opacity = this.computeOpacity2DTF(xxxx, yyyy, value, zzzz);
+            opacity = c;
+        }
 
         //ISABEL
         if (shadingMode) {
@@ -354,14 +340,14 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
      * @param nrSamples
      * @return
      */
-    double computeCompositing(double[] currentPos, double[] lightVector, int nrSamples) {
+    double computeCompositing1D(double[] currentPos, double[] lightVector, int nrSamples) {
         if (nrSamples < 0) {
             return 0;
         }
 
         //emitted color
         int value = (int) volume.getVoxelLinearInterpolate(currentPos);
-        
+
         TFColor color = this.tFunc.getColor(value);
 
         //next position
@@ -373,7 +359,31 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         nrSamples--;
 
         //calculation
-        double res = color.a*color.r + (1 - color.a) * computeCompositing(currentPos, lightVector, nrSamples);
+        double res = color.a * color.r + (1 - color.a) * computeCompositing1D(currentPos, lightVector, nrSamples);
+        //System.out.println(color.r + " , "+ color.a + " , " +res);
+        return res;
+    }
+    
+    double computeCompositing2D(double[] currentPos, double[] lightVector, int nrSamples) {
+        if (nrSamples < 0) {
+            return 0;
+        }
+        //emitted color
+        int value = (int) volume.getVoxelLinearInterpolate(currentPos);
+        
+        //TFColor color = this.tFunc.getColor(value);
+
+        //next position
+        for (int i = 0; i < 3; i++) {
+            currentPos[i] -= lightVector[i];
+        }
+
+        //next
+        nrSamples--;
+
+        double a = this.computeOpacity2DTF(tFunc2D.baseIntensity, tFunc2D.radius, value, this.gradients.getGradient(currentPos).mag);
+        //calculation
+        double res = a + (1 - a) * computeCompositing2D(currentPos, lightVector, nrSamples);
         //System.out.println(color.r + " , "+ color.a + " , " +res);
         return res;
     }
@@ -534,13 +544,12 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
             voxelRad = material_value - voxelValue;
         }
 
-        if (voxelRad < TriRad) {
+        /*if (voxelRad < TriRad) {
             opacity = 1;
-        }
+        }*/
 
-
-        /*if(voxelRad<TriRad)
-            opacity = -(1/TriRad) * voxelRad + 1;*/
+        if(voxelRad<TriRad)
+            opacity = -(1/TriRad) * voxelRad + 1;
         return opacity;
     }
 

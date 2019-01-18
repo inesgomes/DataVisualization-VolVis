@@ -281,41 +281,33 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         TFColor voxel_color = new TFColor();
 
         // 1D transfer function 
-        double mean = 0;
-        double finalNrSamples = nrSamples;
-
-        do {
-            if (compositingMode) {
-                double value = volume.getVoxelLinearInterpolate(currentPos) / 255.;
-                mean += value;
-            }
-            
-                      
-                     
-            for (int i = 0; i < 3; i++) {
-                currentPos[i] += lightVector[i];
-            }
-
-            nrSamples--;
-        } while (nrSamples > 0);
-
         //INES
         if (compositingMode) {
-            voxel_color.r = mean / finalNrSamples;
-            voxel_color.g = mean / finalNrSamples;
-            voxel_color.b = mean / finalNrSamples;
+            VectorMath.setVector(currentPos, exitPoint[0], exitPoint[1], exitPoint[2]);
+            double c = computeCompositing1D(currentPos, lightVector, nrSamples);
+            //System.out.println(c/nrSamples);
+            voxel_color.r = c;
+            voxel_color.g = c;
+            voxel_color.b = c;
 
-            if (mean > 0)   opacity = 1;
+            if (c > 0) {
+                opacity = 1;
+            }
+
         }
         //RISCAS
         if (tf2dMode) {
+            VectorMath.setVector(currentPos, exitPoint[0], exitPoint[1], exitPoint[2]);
+            double c = computeCompositing2D(currentPos, lightVector, nrSamples);
+            //System.out.println(c);
             // 2D transfer function 
             voxel_color.r = this.tFunc2D.color.r;
             voxel_color.g = this.tFunc2D.color.g;
             voxel_color.b = this.tFunc2D.color.b;
             //opacity = this.computeOpacity2DTF(xxxx, yyyy, value, zzzz);
-            opacity = 1;
+            opacity = c;
         }
+
         //ISABEL
         if (shadingMode && opacity==1) {
             // Shading mode on
@@ -345,28 +337,51 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
      * @param nrSamples
      * @return
      */
-    double computeCompositing(double[] currentPos, double[] lightVector, int nrSamples) {
-
+    double computeCompositing1D(double[] currentPos, double[] lightVector, int nrSamples) {
         if (nrSamples < 0) {
-            return 1;
+            return 0;
         }
 
         //emitted color
         int value = (int) volume.getVoxelLinearInterpolate(currentPos);
+
         TFColor color = this.tFunc.getColor(value);
-        double c = computeImageColor(color.r, color.g, color.b, color.a);
 
         //next position
         for (int i = 0; i < 3; i++) {
-            currentPos[i] += lightVector[i];
+            currentPos[i] -= lightVector[i];
         }
 
         //next
         nrSamples--;
 
-        //calculation       
-        double res = c + (1 - color.a) * computeCompositing(currentPos, lightVector, nrSamples);
+        //calculation
+        double res = color.a * color.r + (1 - color.a) * computeCompositing1D(currentPos, lightVector, nrSamples);
+        //System.out.println(color.r + " , "+ color.a + " , " +res);
+        return res;
+    }
+    
+    double computeCompositing2D(double[] currentPos, double[] lightVector, int nrSamples) {
+        if (nrSamples < 0) {
+            return 0;
+        }
+        //emitted color
+        int value = (int) volume.getVoxelLinearInterpolate(currentPos);
+        
+        //TFColor color = this.tFunc.getColor(value);
 
+        //next position
+        for (int i = 0; i < 3; i++) {
+            currentPos[i] -= lightVector[i];
+        }
+
+        //next
+        nrSamples--;
+
+        double a = this.computeOpacity2DTF(tFunc2D.baseIntensity, tFunc2D.radius, value, this.gradients.getGradient(currentPos).mag);
+        //calculation
+        double res = a + (1 - a) * computeCompositing2D(currentPos, lightVector, nrSamples);
+        //System.out.println(color.r + " , "+ color.a + " , " +res);
         return res;
     }
 
@@ -527,12 +542,47 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
 // Compute the opacity based on the value of the pixel and the values of the
 // triangle widget tFunc2D contains the values of the baseintensity and radius
 // tFunc2D.baseIntensity, tFunc2D.radius they are in image intensity units
+
+    /*public double computeOpacity2DTF(double material_value, double material_r,
+        double voxelValue, double gradMagnitude) {
+        
+        double opacity = 0.0;
+        double TriRad = voxelValue*material_r/173.1;
+        
+        double voxelRad = 0.0;
+        
+        if(voxelValue>material_value)
+            voxelRad = voxelValue - material_value;
+        else 
+            voxelRad = material_value - voxelValue;
+        
+        if(voxelRad<TriRad)
+            opacity = 0.5;    
+
+        return opacity;
+    }*/
     public double computeOpacity2DTF(double material_value, double material_r,
             double voxelValue, double gradMagnitude) {
 
-        //double opacity = 0.0;
-        // to be implemented
-        return material_value;
+        double opacity = 0.0;
+        double TriRad = voxelValue * material_r / 173.1;
+
+        //y=-mx+b ---> opacity=-(1/TriRad)*voxelRad+1
+        double voxelRad = 0.0;
+
+        if (voxelValue > material_value) {
+            voxelRad = voxelValue - material_value;
+        } else {
+            voxelRad = material_value - voxelValue;
+        }
+
+        /*if (voxelRad < TriRad) {
+            opacity = 1;
+        }*/
+
+        if(voxelRad<TriRad)
+            opacity = -(1/TriRad) * voxelRad + 1;
+        return opacity;
     }
 
     //////////////////////////////////////////////////////////////////////

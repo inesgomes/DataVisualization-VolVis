@@ -24,12 +24,16 @@ public class TransferFunction2D {
         public TransferFunction2D(short base, double r) {
             this.baseIntensity = base;
             this.radius = r;
-            this.color = new TFColor(0.0, 204.0/255.0, 153.0/255.0, 0.3);
+            this.color = new TFColor(0.0, 204.0/255.0, 153.0/255.0, 0.6);
+            
         }
         
         public void SetBaseRadius(short base, double r)
         {   
             this.baseIntensity = base;
             this.radius = r;
+            
         }
+       
+        
 }

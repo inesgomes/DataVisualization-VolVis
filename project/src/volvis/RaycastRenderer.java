@@ -285,9 +285,19 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         double finalNrSamples = nrSamples;
 
         do {
+            int value = (int) volume.getVoxelLinearInterpolate(currentPos);
             if (compositingMode) {
-                double value = volume.getVoxelLinearInterpolate(currentPos) / 255.;
-                mean += value;
+                double valueCM = value / 255.;
+                mean += valueCM;
+            }
+
+            if (tf2dMode) {
+                // 2D transfer function 
+                voxel_color.r = this.tFunc2D.color.r;
+                voxel_color.g = this.tFunc2D.color.g;
+                voxel_color.b = this.tFunc2D.color.b;
+                //opacity = this.computeOpacity2DTF(xxxx, yyyy, value, zzzz);
+                opacity = this.computeOpacity2DTF(tFunc2D.baseIntensity, tFunc2D.radius, value, this.gradients.getGradient(currentPos).mag);
             }
 
             for (int i = 0; i < 3; i++) {
@@ -303,17 +313,12 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
             voxel_color.g = mean / finalNrSamples;
             voxel_color.b = mean / finalNrSamples;
 
-            if (mean > 0)   opacity = 1;
+            if (mean > 0) {
+                opacity = 1;
+            }
         }
         //RISCAS
-        if (tf2dMode) {
-            // 2D transfer function 
-            voxel_color.r = this.tFunc2D.color.r;
-            voxel_color.g = this.tFunc2D.color.g;
-            voxel_color.b = this.tFunc2D.color.b;
-            //opacity = this.computeOpacity2DTF(xxxx, yyyy, value, zzzz);
-            opacity = this.computeOpacity2DTF(alpha, alpha, opacity, opacity);
-        }
+
         //ISABEL
         if (shadingMode) {
             // Shading mode on
@@ -511,30 +516,32 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
             opacity = 0.5;    
 
         return opacity;
-    }*/  
-    
-    
-public double computeOpacity2DTF(double material_value, double material_r,
-        double voxelValue, double gradMagnitude) {
-        
+    }*/
+    public double computeOpacity2DTF(double material_value, double material_r,
+            double voxelValue, double gradMagnitude) {
+
         double opacity = 0.0;
-        double TriRad = voxelValue*material_r/173.1;
+        double TriRad = voxelValue * material_r / 173.1;
+
         //y=-mx+b ---> opacity=-(1/TriRad)*voxelRad+1
         double voxelRad = 0.0;
-        
-        if(voxelValue>material_value)
+
+        if (voxelValue > material_value) {
             voxelRad = voxelValue - material_value;
-        else 
+        } else {
             voxelRad = material_value - voxelValue;
-        
-        if(voxelRad<TriRad)
-            opacity = 0.5;    
+        }
+
+        if (voxelRad < TriRad) {
+            opacity = 1;
+        }
+
 
         /*if(voxelRad<TriRad)
             opacity = -(1/TriRad) * voxelRad + 1;*/
-        
         return opacity;
     }
+
     //////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////

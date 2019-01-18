@@ -64,9 +64,9 @@ public class GradientVolume {
             
             // to be implemented
             
-        result.x = 1;
-        result.y = 1;
-        result.z = 1;
+        result.x = (1 - factor)*g0.x + factor*g1.x;
+        result.y = (1 - factor)*g0.y + factor*g1.y;
+        result.z = (1 - factor)*g0.z + factor*g1.z;
         result.mag = (float) Math.sqrt(result.x * result.x + result.y * result.y + result.z * result.z);
     }
 	
@@ -79,8 +79,36 @@ public class GradientVolume {
     public VoxelGradient getGradient(double[] coord) {
         
         // to be implemented
+          if (coord[0] < 0 || coord[0] > (dimX-2) || coord[1] < 0 || coord[1] > (dimY-2)
+                || coord[2] < 0 || coord[2] > (dimZ-2)) {
+            return zero;
+        }
+        int x = (int) Math.floor(coord[0]); 
+        int y = (int) Math.floor(coord[1]);
+        int z = (int) Math.floor(coord[2]);
+        
+        float fac_x = (float) coord[0] - x;
+        float fac_y = (float) coord[1] - y;
+        float fac_z = (float) coord[2] - z;
 
-        return getGradientNN(coord);
+        VoxelGradient result0=new VoxelGradient();
+        VoxelGradient result1=new VoxelGradient();
+        VoxelGradient result2=new VoxelGradient();
+        VoxelGradient result3=new VoxelGradient();
+        VoxelGradient result4=new VoxelGradient();
+        VoxelGradient result5=new VoxelGradient();
+        VoxelGradient result6=new VoxelGradient();
+      
+        interpolate(getGradient(x, y, z), getGradient(x+1, y, z), fac_x, result0 );              //t0
+        interpolate(getGradient(x, y+1, z), getGradient(x+1, y+1, z), fac_x, result1);           //t1
+        interpolate(getGradient(x, y, z+1), getGradient(x+1, y, z+1), fac_x, result2);           //t2    
+        interpolate(getGradient(x, y+1, z+1), getGradient(x+1, y+1, z+1), fac_x, result3);       //t3
+        interpolate(result0, result1, fac_y, result4);
+        interpolate(result2, result3, fac_y, result5);
+        interpolate(result4, result5, fac_z, result6);
+        
+        
+        return result6;
 
     }
     
@@ -137,7 +165,7 @@ public class GradientVolume {
     }
 
 	//Do NOT modify this function
-	public VoxelGradient getGradient(int x, int y, int z) {
+	public VoxelGradient getGradient(int x, int y, int z) {             
         return data[x + dimX * (y + dimY * z)];
     }
 

@@ -226,22 +226,23 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
             double value = volume.getVoxelLinearInterpolate(currentPos);
             if (value > iso_value) {
                 alpha = 1;
+
+                if (shadingMode) {
+                    TFColor voxel_color = new TFColor(r, g, b, alpha);
+                    voxel_color = computePhongShading(voxel_color, this.gradients.getGradient(currentPos), lightVector, rayVector);
+                    r = voxel_color.r;
+                    g = voxel_color.g;
+                    b = voxel_color.b;
+                    break;
+                }
+                
             }
             for (int i = 0; i < 3; i++) {
                 currentPos[i] += lightVector[i];                                  //update currentPos (it follows lightVector)
             }
             nrSamples--;
-        } while (nrSamples > 0);      
-        
-        if (shadingMode) {
-            TFColor voxel_color = new TFColor(r,g,b,alpha);
-            voxel_color = computePhongShading(voxel_color, this.gradients.getGradient(entryPoint), lightVector, rayVector);
-            r = voxel_color.r;
-            g = voxel_color.g;
-            b = voxel_color.b;
-            alpha = voxel_color.a;
-        }
-        
+        } while (nrSamples > 0);
+
         // isoColor contains the isosurface color from the interface
         //computes the color
         int color = computeImageColor(r, g, b, alpha);
@@ -317,12 +318,10 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         }
 
         //ISABEL
-        if (shadingMode && opacity==1) {
-            // Shading mode on
-            
-            
+        if (shadingMode) {
+            // Shading mode on           
             voxel_color = computePhongShading(voxel_color, this.gradients.getGradient(entryPoint), lightVector, rayVector);
-            opacity=voxel_color.a;
+            opacity = voxel_color.a;
         }
 
         //END - DO NOT TOUCH THIS
@@ -368,16 +367,15 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         //System.out.println(color.r + " , "+ color.a + " , " +res);
         return res;
     }
-    
+
     double computeCompositing2D(double[] currentPos, double[] lightVector, int nrSamples) {
         if (nrSamples < 0) {
             return 0;
         }
         //emitted color
         int value = (int) volume.getVoxelLinearInterpolate(currentPos);
-        
-        //TFColor color = this.tFunc.getColor(value);
 
+        //TFColor color = this.tFunc.getColor(value);
         //next position
         for (int i = 0; i < 3; i++) {
             currentPos[i] -= lightVector[i];
@@ -407,33 +405,30 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         double kd = 0.7;
         double ks = 0.2;
         int alfa = 100;
-        
+
         TFColor color;
-        
-        if(gradient.x==0 && gradient.y==0 && gradient.z==0){
-           
+
+        //nao existe o peixito
+        if (gradient.x == 0 && gradient.y == 0 && gradient.z == 0) {
+
             return voxel_color;
         }
-        
-        
+
         //normal
-        
         //double normal_x=5;
-        
         double[] gradVec = {gradient.x, gradient.y, gradient.z};
-        
+
         //falta cos
-        
-        double cos1N = VectorMath.dotproduct(lightVector,gradVec );
+        double cos1N = VectorMath.dotproduct(lightVector, gradVec);
         double cos1D = (Math.sqrt(Math.pow(lightVector[0], 2) + Math.pow(lightVector[1], 2) + Math.pow(lightVector[2], 2)) * gradient.mag);
         //System.out.println("cos parte 1= " + (lightVector[0] * gradient.x + lightVector[1] * gradient.y + lightVector[2] * gradient.z));
         //System.out.println("cos parte 2= " + (Math.sqrt(Math.pow(lightVector[0], 2) + Math.pow(lightVector[1], 2) + Math.pow(lightVector[2], 2)) * Math.sqrt(Math.pow(gradient.x, 2) + Math.pow(gradient.y, 2) + Math.pow(gradient.z, 2))));
-        double cos1=cos1N/cos1D;
-        System.out.println("cos1D   " + cos1D);
-        System.out.println("cos1   " + cos1);
-       
-        double teta=Math.acos(cos1);
-        double cos2=Math.cos(2*teta);
+        double cos1 = cos1N / cos1D;
+        //System.out.println("cos1D   " + cos1D);
+        //System.out.println("cos1   " + cos1);
+
+        double teta = Math.acos(cos1);
+        double cos2 = Math.cos(2 * teta);
         /*
         double cos2N = VectorMath.dotproduct(lightVector,rayVector );
         double cos2D = (Math.sqrt(Math.pow(lightVector[0], 2) + Math.pow(lightVector[1], 2) + Math.pow(lightVector[2], 2)) * Math.sqrt(Math.pow(rayVector[0], 2) + Math.pow(rayVector[1], 2) + Math.pow(rayVector[2], 2)));
@@ -442,15 +437,15 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         System.out.println("cos2   " + cos2);
        // System.out.println("light   " + lightVector[0] + ",   " + lightVector[1] + ",   " + lightVector[2]);
        // System.out.println("ray   " + rayVector[0] + ",   " + rayVector[1] + ",   " + rayVector[2]);
-        */
-        double r= lightVector[0]*ka*voxel_color.r + lightVector[0]*kd*voxel_color.r*cos1 + lightVector[0]*ks*Math.pow(cos2, alfa);
-        double g= lightVector[1]*ka*voxel_color.g + lightVector[1]*kd*voxel_color.g*cos1 + lightVector[1]*ks*Math.pow(cos2, alfa);
-        double b= lightVector[2]*ka*voxel_color.b + lightVector[2]*kd*voxel_color.b*cos1 + lightVector[2]*ks*Math.pow(cos2, alfa);
-       //System.out.println("r   " + r);
-       //System.out.println("g   " + g);
-       //System.out.println("b   " + b);
-       
-        color = new TFColor(r,g,b,1);
+         */
+        double r = lightVector[0] * ka * voxel_color.r + lightVector[0] * kd * voxel_color.r * cos1 + lightVector[0] * ks * Math.pow(cos2, alfa);
+        double g = lightVector[1] * ka * voxel_color.g + lightVector[1] * kd * voxel_color.g * cos1 + lightVector[1] * ks * Math.pow(cos2, alfa);
+        double b = lightVector[2] * ka * voxel_color.b + lightVector[2] * kd * voxel_color.b * cos1 + lightVector[2] * ks * Math.pow(cos2, alfa);
+        //System.out.println("r   " + r);
+        //System.out.println("g   " + g);
+        //System.out.println("b   " + b);
+
+        color = new TFColor(r, g, b, 1);
 
         return color;
     }
@@ -587,9 +582,9 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         /*if (voxelRad < TriRad) {
             opacity = 1;
         }*/
-
-        if(voxelRad<TriRad)
-            opacity = -(1/TriRad) * voxelRad + 1;
+        if (voxelRad < TriRad) {
+            opacity = -(1 / TriRad) * voxelRad + 1;
+        }
         return opacity;
     }
 

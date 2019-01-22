@@ -414,37 +414,66 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
             return voxel_color;
         }
 
-        //normal
-        //double normal_x=5;
-        double[] gradVec = {gradient.x, gradient.y, gradient.z};
-
-        //falta cos
-        double cos1N = VectorMath.dotproduct(lightVector, gradVec);
-        double cos1D = (Math.sqrt(Math.pow(lightVector[0], 2) + Math.pow(lightVector[1], 2) + Math.pow(lightVector[2], 2)) * gradient.mag);
+        //normal gradiente
+        double[] gradVec = {gradient.x/gradient.mag, gradient.y/gradient.mag, gradient.z/gradient.mag};
+        
+        //normal light
+        double lightNorm =Math.sqrt(Math.pow(lightVector[0], 2) + Math.pow(lightVector[1], 2) + Math.pow(lightVector[2], 2));
+        double[] lightNormVector = {lightVector[0]/lightNorm, lightVector[1]/lightNorm, lightVector[2]/lightNorm};
+        
+        //normal ray
+        double rayNorm =Math.sqrt(Math.pow(rayVector[0], 2) + Math.pow(rayVector[1], 2) + Math.pow(rayVector[2], 2));
+        double[] rayNormVector = {-rayVector[0]/rayNorm, -rayVector[1]/rayNorm, -rayVector[2]/rayNorm};
+        
+        //cos 1
+        double cos1 = VectorMath.dotproduct(lightNormVector, gradVec);
+        
+        //R
+        double[] twice_gradVec = {gradVec[0]*2, gradVec[1]*2,gradVec[2]*2};
+        double x = VectorMath.dotproduct(twice_gradVec, lightNormVector);
+        double[] x_gradVec = {gradVec[0]*x, gradVec[1]*x,gradVec[2]*x};
+        double[] R = {x_gradVec[0]-lightNormVector[0],x_gradVec[1]-lightNormVector[1],x_gradVec[2]-lightNormVector[2]};
+        //cos 2 
+        double cos2 = VectorMath.dotproduct(rayNormVector,R );
+      //  double cos1D = (Math.sqrt(Math.pow(lightVector[0], 2) + Math.pow(lightVector[1], 2) + Math.pow(lightVector[2], 2)) * gradient.mag);
         //System.out.println("cos parte 1= " + (lightVector[0] * gradient.x + lightVector[1] * gradient.y + lightVector[2] * gradient.z));
         //System.out.println("cos parte 2= " + (Math.sqrt(Math.pow(lightVector[0], 2) + Math.pow(lightVector[1], 2) + Math.pow(lightVector[2], 2)) * Math.sqrt(Math.pow(gradient.x, 2) + Math.pow(gradient.y, 2) + Math.pow(gradient.z, 2))));
-        double cos1 = cos1N / cos1D;
+      //double cos1 = cos1N / cos1D;
         //System.out.println("cos1D   " + cos1D);
         //System.out.println("cos1   " + cos1);
-
-        double teta = Math.acos(cos1);
-        double cos2 = Math.cos(2 * teta);
+        
+        
         /*
+        double teta = Math.acos(cos1);
+       double cos2 = Math.cos(2 * teta);
+        
         double cos2N = VectorMath.dotproduct(lightVector,rayVector );
         double cos2D = (Math.sqrt(Math.pow(lightVector[0], 2) + Math.pow(lightVector[1], 2) + Math.pow(lightVector[2], 2)) * Math.sqrt(Math.pow(rayVector[0], 2) + Math.pow(rayVector[1], 2) + Math.pow(rayVector[2], 2)));
-        double  cos2=cos2N/cos2D;
+        double cos2=cos2N/cos2D;
+        
         System.out.println("cos2D" + cos2D);
         System.out.println("cos2   " + cos2);
        // System.out.println("light   " + lightVector[0] + ",   " + lightVector[1] + ",   " + lightVector[2]);
        // System.out.println("ray   " + rayVector[0] + ",   " + rayVector[1] + ",   " + rayVector[2]);
          */
-        double r = lightVector[0] * ka * voxel_color.r + lightVector[0] * kd * voxel_color.r * cos1 + lightVector[0] * ks * Math.pow(cos2, alfa);
-        double g = lightVector[1] * ka * voxel_color.g + lightVector[1] * kd * voxel_color.g * cos1 + lightVector[1] * ks * Math.pow(cos2, alfa);
-        double b = lightVector[2] * ka * voxel_color.b + lightVector[2] * kd * voxel_color.b * cos1 + lightVector[2] * ks * Math.pow(cos2, alfa);
-        //System.out.println("r   " + r);
-        //System.out.println("g   " + g);
-        //System.out.println("b   " + b);
-
+        double r = lightVector[0] * ka * voxel_color.r + lightVector[1] * kd * voxel_color.r * cos1 + lightVector[2] * ks * voxel_color.r * Math.pow(cos2, alfa);
+        double g = lightVector[0] * ka * voxel_color.g + lightVector[1] * kd * voxel_color.g * cos1 + lightVector[2] * ks* voxel_color.g * Math.pow(cos2, alfa);
+        double b = lightVector[0] * ka * voxel_color.b + lightVector[1] * kd * voxel_color.b * cos1 + lightVector[2] * ks * voxel_color.b* Math.pow(cos2, alfa);
+        
+        if(r<0){
+            r=0;
+        }
+        if(g<0){
+            g=0;
+        }
+        if(b<0){
+            b=0;
+        }
+        /*
+        System.out.println("r   " + r);
+        System.out.println("g   " + g);
+        System.out.println("b   " + b);
+        */
         color = new TFColor(r, g, b, 1);
 
         return color;

@@ -383,7 +383,9 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
 
         double a = this.computeOpacity2DTF(tFunc2D.baseIntensity, tFunc2D.radius, value, this.gradients.getGradient(currentPos).mag);
         //calculation
-        double res = a + (1 - a) * computeCompositing2D(currentPos, lightVector, nrSamples);
+        double res = a + (1-a) *computeCompositing2D(currentPos, lightVector, nrSamples);
+        
+      
         //System.out.println(color.r + " , "+ color.a + " , " +res);
         return res;
     }
@@ -533,24 +535,63 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
             double voxelValue, double gradMagnitude) {
 
         double opacity = 0.0;
-        double TriRad = voxelValue * material_r / 173.1;
+        double TriRad = gradMagnitude * material_r / 173.1;
 
-        //y=-mx+b ---> opacity=-(1/TriRad)*voxelRad+1
         double voxelRad = 0.0;
-
+        double l=0.0;
+        double h=0.0;
+        double area=0.0;
+        
         if (voxelValue > material_value) {
             voxelRad = voxelValue - material_value;
+            
+    
         } else {
             voxelRad = material_value - voxelValue;
         }
 
-        /*if (voxelRad < TriRad) {
-            opacity = 1;
-        }*/
+        l = TriRad - voxelRad;
+        h = gradMagnitude - gradMagnitude*voxelRad/TriRad;
+        area = l*h;
+        
 
-        if(voxelRad<TriRad)
-            opacity = -(1/TriRad) * voxelRad + 1;
+        if(voxelRad<TriRad){
+            opacity =(1/(173.1*material_r)) * area;
+        }
+        
+        /*if(gradMagnitude==0 && voxelRad==TriRad)
+            opacity=1;
+        else if((gradMagnitude>0) && (voxelRad - TriRad*gradMagnitude < TriRad) && (voxelRad + TriRad*gradMagnitude > TriRad))
+            if(TriRad>voxelValue)
+                opacity=1-(1/TriRad)*(TriRad-voxelRad)/gradMagnitude;
+            else
+                opacity=1-(1/TriRad)*(voxelRad-TriRad)/gradMagnitude;
+        else
+            opacity=0;*/
+        
+        
+        
+        
+    
+        //opacity = 0.0;
+
+        //kniss et al.  - tried this but triangle functionality was commented out. Hence, used Gooch tone shading
+       /* if (gradMagnitude < 0 || gradMagnitude > 173.1)
+            opacity =0.0;
+        else*/
+
+        /*if (gradMagnitude == 0.0 && voxelValue == material_value) {
+            opacity = 1.0;
+        } else if (gradMagnitude > 0.0 && voxelValue - material_r * gradMagnitude <= material_value
+                && material_value <= voxelValue + material_r * gradMagnitude) {
+
+            opacity = 1.0 - Math.abs((material_value - voxelValue) / (gradMagnitude * material_r)); //levoy
+        }*/
+        
+        
+        
         return opacity;
+        
     }
 
     //////////////////////////////////////////////////////////////////////

@@ -204,7 +204,11 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         double[] lightVector = new double[3];
         //We define the light vector as directed toward the view point (which is the source of the light)
         // another light vector would be possible
+        
         VectorMath.setVector(lightVector, rayVector[0] * sampleStep, rayVector[1] * sampleStep, rayVector[2] * sampleStep);
+        
+        double[] increments = new double[3];
+        VectorMath.setVector(increments, rayVector[0] * sampleStep, rayVector[1] * sampleStep, rayVector[2] * sampleStep);
 
         // To be Implemented
         //Initialization of the colors as floating point values
@@ -220,13 +224,22 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
 
         //the current position is initialized as the entry point
         double[] currentPos = new double[3];
-        VectorMath.setVector(currentPos, entryPoint[0], entryPoint[1], entryPoint[2]);
-
+        double[] previousPos = new double[3];
+        VectorMath.setVector(currentPos, entryPoint[0]+increments[0], entryPoint[1]+increments[1], entryPoint[2]+increments[2]);
+        VectorMath.setVector(previousPos, entryPoint[0], entryPoint[1], entryPoint[2]);
+        
+        double value;
+        double previousValue;
+        
         do {
-            double value = volume.getVoxelLinearInterpolate(currentPos);
+            value = volume.getVoxelLinearInterpolate(currentPos);
+            previousValue = volume.getVoxelLinearInterpolate(previousPos);
             if (value > iso_value) {
                 alpha = 1;
-
+               
+                //bisection
+                currentPos= bisection_accuracy(currentPos, increments, previousValue, value, iso_value);
+               
                 if (shadingMode) {
                     TFColor voxel_color = new TFColor(r, g, b, alpha);
                     voxel_color = computePhongShading(voxel_color, gradients.getGradient(currentPos), lightVector, rayVector);
@@ -255,9 +268,32 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
     // Given the current sample position, increment vector of the sample (vector from previous sample to current sample) and sample Step. 
     // Previous sample value and current sample value, isovalue value
     // The function should search for a position where the iso_value passes that it is more precise.
-    void bisection_accuracy(double[] currentPos, double[] increments, double sampleStep, float previousvalue, float value, float iso_value) {
+    double[] bisection_accuracy(double[] currentPos, double[] increments, double previousvalue, double value, float iso_value) {
 
         // to be implemented
+        double tol;
+        int found_Value=0;
+        float iso_half;
+        
+        double[] teste = {currentPos[0], currentPos[1], currentPos[2]};
+                        
+        double[] previousPos = {currentPos[0] - increments[0], currentPos[1] - increments[1], currentPos[2] - increments[2]};
+           
+        do {
+            double[] half = {(currentPos[0] + previousPos[0]) / 2, (currentPos[1] + previousPos[1]) / 2, (currentPos[2] + previousPos[2]) / 2}; 
+            iso_half = volume.getVoxelLinearInterpolate(half);
+            tol=Math.sqrt(Math.pow(currentPos[0], 2) + Math.pow(currentPos[1], 2) + Math.pow(currentPos[2], 2))-Math.sqrt(Math.pow(previousPos[0], 2) + Math.pow(previousPos[1], 2) + Math.pow(previousPos[2], 2));
+            if (iso_half == iso_value) {
+                currentPos = half;
+                found_Value = 1;
+            } else if (iso_half > iso_value) {
+                currentPos = half;
+            } else if (iso_half < iso_value) {
+                previousPos = half;
+            }
+        }  while (found_Value == 0 && tol>0.001);
+       
+        return currentPos;
     }
 
     //////////////////////////////////////////////////////////////////////
@@ -405,24 +441,28 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         double kd = 0.7;
         double ks = 0.2;
         int alfa = 100;
+        
+        double[] lightProperty_a = {1,1,1}; 
+        double[] lightProperty_d = {1,1,1}; 
+        double[] lightProperty_s = {1,1,1}; 
 
         TFColor color;
 
-        //nao existe o peixito
+        //fish doesn't exist
         if (gradient.x == 0 && gradient.y == 0 && gradient.z == 0) {
 
             return voxel_color;
         }
 
-        //normal gradiente
+        //norm gradiente
         double[] gradVec = {gradient.x / gradient.mag, gradient.y / gradient.mag, gradient.z / gradient.mag};
 
-        //normal light
-        double lightNorm = Math.sqrt(Math.pow(lightVector[0], 2) + Math.pow(lightVector[1], 2) + Math.pow(lightVector[2], 2));
+        //norm light
+        double lightNorm = VectorMath.length(lightVector);  //Math.sqrt(Math.pow(lightVector[0], 2) + Math.pow(lightVector[1], 2) + Math.pow(lightVector[2], 2));
         double[] lightNormVector = {lightVector[0] / lightNorm, lightVector[1] / lightNorm, lightVector[2] / lightNorm};
 
-        //normal ray
-        double rayNorm = Math.sqrt(Math.pow(rayVector[0], 2) + Math.pow(rayVector[1], 2) + Math.pow(rayVector[2], 2));
+        //norm ray
+        double rayNorm = VectorMath.length(rayVector);  //Math.sqrt(Math.pow(rayVector[0], 2) + Math.pow(rayVector[1], 2) + Math.pow(rayVector[2], 2));
         double[] rayNormVector = {rayVector[0] / rayNorm, rayVector[1] / rayNorm, rayVector[2] / rayNorm};
 
         //cos 1
@@ -433,30 +473,12 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         double x = VectorMath.dotproduct(twice_gradVec, lightNormVector);
         double[] x_gradVec = {gradVec[0] * x, gradVec[1] * x, gradVec[2] * x};
         double[] R = {x_gradVec[0] - lightNormVector[0], x_gradVec[1] - lightNormVector[1], x_gradVec[2] - lightNormVector[2]};
-        //cos 2 
-        //  double cos2 = VectorMath.dotproduct(rayNormVector,R );
-        
-        //  double cos1D = (Math.sqrt(Math.pow(lightVector[0], 2) + Math.pow(lightVector[1], 2) + Math.pow(lightVector[2], 2)) * gradient.mag);
-        //System.out.println("cos parte 1= " + (lightVector[0] * gradient.x + lightVector[1] * gradient.y + lightVector[2] * gradient.z));
-        //System.out.println("cos parte 2= " + (Math.sqrt(Math.pow(lightVector[0], 2) + Math.pow(lightVector[1], 2) + Math.pow(lightVector[2], 2)) * Math.sqrt(Math.pow(gradient.x, 2) + Math.pow(gradient.y, 2) + Math.pow(gradient.z, 2))));
-        //double cos1 = cos1N / cos1D;
-        //System.out.println("cos1D   " + cos1D);
-        //System.out.println("cos1   " + cos1);
+        double cos2 = VectorMath.dotproduct(rayNormVector,R );
 
-        double teta = Math.acos(cos1);
-        double cos2 = Math.cos(2 * teta);
-        /*
-        
-        System.out.println("cos2   " + cos2);
-       // System.out.println("light   " + lightVector[0] + ",   " + lightVector[1] + ",   " + lightVector[2]);
-       // System.out.println("ray   " + rayVector[0] + ",   " + rayVector[1] + ",   " + rayVector[2]);
-         */
-        double r = 1 * ka * voxel_color.r + 1 * kd * voxel_color.r * cos1 + 1 * ks * voxel_color.r * Math.pow(cos2, alfa);
-        double g = 1 * ka * voxel_color.g + 1 * kd * voxel_color.g * cos1 + 1 * ks * voxel_color.g * Math.pow(cos2, alfa);
-        double b = 1 * ka * voxel_color.b + 1 * kd * voxel_color.b * cos1 + 1 * ks * voxel_color.b * Math.pow(cos2, alfa);
-
-        //System.out.println(" b material    " + voxel_color.b);
-        
+        double r = lightProperty_a[0] * ka * voxel_color.r + lightProperty_d[0] * kd * voxel_color.r * cos1 + lightProperty_s[0] * ks * voxel_color.r * Math.pow(cos2, alfa);
+        double g = lightProperty_a[1] * ka * voxel_color.g + lightProperty_d[1] * kd * voxel_color.g * cos1 + lightProperty_s[1] * ks * voxel_color.g * Math.pow(cos2, alfa);
+        double b = lightProperty_a[2] * ka * voxel_color.b + lightProperty_d[2] * kd * voxel_color.b * cos1 + lightProperty_s[2] * ks * voxel_color.b * Math.pow(cos2, alfa);
+      
         if (r < 0) {
             r = 0;
         }
@@ -475,13 +497,8 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         if (b > 1) {
             b = 1;
         }
-        /*
-        System.out.println("r   " + r);
-        System.out.println("g   " + g);
-        System.out.println("b   " + b);
-         */
+       
         color = new TFColor(r, g, b, 1);
-
         return color;
     }
 

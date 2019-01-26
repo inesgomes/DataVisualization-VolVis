@@ -329,13 +329,13 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         //INES
         if (compositingMode) {
             VectorMath.setVector(currentPos, exitPoint[0], exitPoint[1], exitPoint[2]);
-            double c = computeCompositing1D(currentPos, lightVector, nrSamples);
+            TFColor accColor = computeCompositing1D(currentPos, lightVector, nrSamples);
             //System.out.println(c/nrSamples);
-            voxel_color.r = c;
-            voxel_color.g = c;
-            voxel_color.b = c;
+            voxel_color.r = accColor.r;
+            voxel_color.g = accColor.g;
+            voxel_color.b = accColor.b;
 
-            if (c > 0) {
+            if (accColor.r > 0 || accColor.g > 0 || accColor.b > 0) {
                 opacity = 1;
             }
 
@@ -343,14 +343,13 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         //RISCAS
         if (tf2dMode) {
             VectorMath.setVector(currentPos, exitPoint[0], exitPoint[1], exitPoint[2]);
-            double c = computeCompositing2D(currentPos, lightVector, nrSamples);
+            TFColor accColor = computeCompositing2D(currentPos, lightVector, nrSamples);
             //System.out.println(c);
-            // 2D transfer function 
-            voxel_color.r = this.tFunc2D.color.r;
-            voxel_color.g = this.tFunc2D.color.g;
-            voxel_color.b = this.tFunc2D.color.b;
-            //opacity = this.computeOpacity2DTF(xxxx, yyyy, value, zzzz);
-            opacity = c;
+            // 2D transfer function             
+            voxel_color.r = accColor.r;
+            voxel_color.g = accColor.g;
+            voxel_color.b = accColor.b;
+            opacity = accColor.a;
         }
 
         //ISABEL
@@ -380,9 +379,9 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
      * @param nrSamples
      * @return
      */
-    double computeCompositing1D(double[] currentPos, double[] lightVector, int nrSamples) {
+    TFColor computeCompositing1D(double[] currentPos, double[] lightVector, int nrSamples) {
         if (nrSamples < 0) {
-            return 0;
+            return new TFColor(0,0,0,0);
         }
 
         //emitted color
@@ -399,17 +398,21 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         nrSamples--;
 
         //calculation
-        double res = color.a * color.r + (1 - color.a) * computeCompositing1D(currentPos, lightVector, nrSamples);
-        //System.out.println(color.r + " , "+ color.a + " , " +res);
-        return res;
+        TFColor previousColor = computeCompositing1D(currentPos, lightVector, nrSamples);
+        TFColor accColor = new TFColor();
+        accColor.r = color.a * color.r + (1 - color.a) * previousColor.r;
+        accColor.g = color.a * color.g + (1 - color.a) * previousColor.g;
+        accColor.b = color.a * color.b + (1 - color.a) * previousColor.b;
+        return accColor;
     }
 
-    double computeCompositing2D(double[] currentPos, double[] lightVector, int nrSamples) {
+    TFColor computeCompositing2D(double[] currentPos, double[] lightVector, int nrSamples) {
         if (nrSamples < 0) {
-            return 0;
+            return new TFColor(0,0,0,0);
         }
         //emitted color
         int value = (int) volume.getVoxelLinearInterpolate(currentPos);
+        double mag = this.gradients.getGradient(currentPos).mag;
 
         //TFColor color = this.tFunc.getColor(value);
         //next position
@@ -420,13 +423,16 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         //next
         nrSamples--;
 
-        double a = this.computeOpacity2DTF(tFunc2D.baseIntensity, tFunc2D.radius, value, this.gradients.getGradient(currentPos).mag);
-        //calculation
-        double res = a + (1-a) *computeCompositing2D(currentPos, lightVector, nrSamples);
+        double currentOpacity = this.computeOpacity2DTF(tFunc2D.baseIntensity, tFunc2D.radius, value, mag);//*this.tFunc2D.color.a;
+        TFColor previousColor = computeCompositing2D(currentPos, lightVector, nrSamples);        
+
+        TFColor accColor = new TFColor();
+        accColor.r = this.tFunc2D.color.r ;//currentOpacity*this.tFunc2D.color.r + (1- currentOpacity)*previousColor.r;
+        accColor.b = this.tFunc2D.color.g; //currentOpacity*this.tFunc2D.color.g + (1- currentOpacity)*previousColor.g;
+        accColor.b = this.tFunc2D.color.b; //currentOpacity*this.tFunc2D.color.b + (1- currentOpacity)*previousColor.b;
+        accColor.a = currentOpacity + (1 - currentOpacity)*previousColor.a;
         
-      
-        //System.out.println(color.r + " , "+ color.a + " , " +res);
-        return res;
+        return accColor;
     }
 
     //////////////////////////////////////////////////////////////////////
@@ -631,8 +637,6 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         
         if (voxelValue > material_value) {
             voxelRad = voxelValue - material_value;
-            
-    
         } else {
             voxelRad = material_value - voxelValue;
         }
@@ -640,9 +644,8 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         l = TriRad - voxelRad;
         h = gradMagnitude - gradMagnitude*voxelRad/TriRad;
         area = l*h;
-        
 
-        if(voxelRad<TriRad){
+        if(voxelRad < TriRad){
             opacity =(1/(173.1*material_r)) * area;
         }
         
@@ -656,27 +659,19 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         else
             opacity=0;*/
         
-        
-        
-        
-    
-        //opacity = 0.0;
-
-        //kniss et al.  - tried this but triangle functionality was commented out. Hence, used Gooch tone shading
-       /* if (gradMagnitude < 0 || gradMagnitude > 173.1)
-            opacity =0.0;
-        else*/
-
-        /*if (gradMagnitude == 0.0 && voxelValue == material_value) {
-            opacity = 1.0;
-        } else if (gradMagnitude > 0.0 && voxelValue - material_r * gradMagnitude <= material_value
+                //kniss et al.  - tried this but triangle functionality was commented out. Hence, used Gooch tone shading
+        /*
+        opacity = 0.0;
+        if (gradMagnitude == 0.0 && voxelValue == material_value) {
+            opacity = 1;
+        } else if (gradMagnitude > 0.0 
+                && voxelValue - material_r * gradMagnitude <= material_value
                 && material_value <= voxelValue + material_r * gradMagnitude) {
 
             opacity = 1.0 - Math.abs((material_value - voxelValue) / (gradMagnitude * material_r)); //levoy
         }*/
-        if (voxelRad < TriRad) {
-            opacity = -(1 / TriRad) * voxelRad + 1;
-        }
+
+        //System.out.println(opacity);
         return opacity;
         
     }

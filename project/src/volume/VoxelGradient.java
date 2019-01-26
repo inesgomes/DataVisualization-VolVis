@@ -1,4 +1,4 @@
-/*
+ /*
  * Anna Vilanova: Basic class to represent the gradient. 
  * NO MODIFICATION NEEDED 
  *

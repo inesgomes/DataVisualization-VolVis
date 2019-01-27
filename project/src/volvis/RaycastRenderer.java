@@ -348,7 +348,10 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
             voxel_color.r = accColor.r;
             voxel_color.g = accColor.g;
             voxel_color.b = accColor.b;
-            opacity = accColor.a;
+            
+            if (accColor.r > 0 || accColor.g > 0 || accColor.b > 0) {
+                opacity = 1;
+            }
         }
 
         //END - DO NOT TOUCH THIS
@@ -425,19 +428,19 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         //next
         nrSamples--;
 
-        double currentOpacity = this.computeOpacity2DTF(tFunc2D.baseIntensity, tFunc2D.radius, value, mag);//*this.tFunc2D.color.a;
+        TFColor currentColor = this.tFunc2D.color;
+        double currentOpacity = this.computeOpacity2DTF(tFunc2D.baseIntensity, tFunc2D.radius, value, mag)*currentColor.a;
         TFColor previousColor = computeCompositing2D(currentPos, lightVector, nrSamples,rayVector);   
-        
-        TFColor color = this.tFunc2D.color;
+
         if(shadingMode){
-            color = computePhongShading(color, this.gradients.getGradient(currentPos), lightVector, rayVector);
+            currentColor = computePhongShading(currentColor, this.gradients.getGradient(currentPos), lightVector, rayVector);
         }
 
         TFColor accColor = new TFColor();
-        accColor.r = color.r ;//currentOpacity*this.tFunc2D.color.r + (1- currentOpacity)*previousColor.r;
-        accColor.b = color.g; //currentOpacity*this.tFunc2D.color.g + (1- currentOpacity)*previousColor.g;
-        accColor.b = color.b; //currentOpacity*this.tFunc2D.color.b + (1- currentOpacity)*previousColor.b;
-        accColor.a = currentOpacity + (1 - currentOpacity)*previousColor.a;
+        accColor.r = currentOpacity*currentColor.r + (1- currentOpacity)*previousColor.r; //currentColor.r
+        accColor.g = currentOpacity*currentColor.g + (1- currentOpacity)*previousColor.g; //currentColor.g
+        accColor.b = currentOpacity*currentColor.b + (1- currentOpacity)*previousColor.b; //currentColor.b
+        //accColor.a = currentOpacity + (1 - currentOpacity)*previousColor.a;
         
         return accColor;
     }

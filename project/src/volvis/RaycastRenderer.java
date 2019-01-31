@@ -378,20 +378,20 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         
         //emitted color
         int value = (int) volume.getVoxelLinearInterpolate(currentPos);
-        TFColor color = this.tFunc.getColor(value);
+        TFColor currColor = this.tFunc.getColor(value);
         TFColor accColor = new TFColor(0,0,0,0);
         
-        if (nrSamples < 0 || color.a > 0.99) {
-            color.r *= color.a;
-            color.g *= color.a;
-            color.b *= color.a;
-            return color;
+        if (nrSamples < 0 || currColor.a > 0.99) {
+            currColor.r *= currColor.a;
+            currColor.g *= currColor.a;
+            currColor.b *= currColor.a;
+            return currColor;
         }
         
         if(shadingMode){
-            //if it's zero, idc
-            if(color.r > 0 || color.g > 0 || color.b > 0)
-                color = computePhongShading(color, this.gradients.getGradient(currentPos), lightVector, rayVector);
+            //if it's zero, idc --> optimization
+            if(currColor.r > 0 || currColor.g > 0 || currColor.b > 0)
+                currColor = computePhongShading(currColor, this.gradients.getGradient(currentPos), lightVector, rayVector);
         }
 
         //next position
@@ -405,9 +405,9 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         //calculation
         TFColor previousColor = computeCompositing1D(currentPos, lightVector, nrSamples,rayVector);
        
-        accColor.r = color.a * color.r + (1 - color.a) * previousColor.r;
-        accColor.g = color.a * color.g + (1 - color.a) * previousColor.g;
-        accColor.b = color.a * color.b + (1 - color.a) * previousColor.b;
+        accColor.r = currColor.a * currColor.r + (1 - currColor.a) * previousColor.r;
+        accColor.g = currColor.a * currColor.g + (1 - currColor.a) * previousColor.g;
+        accColor.b = currColor.a * currColor.b + (1 - currColor.a) * previousColor.b;
         return accColor;
     }
 
@@ -441,7 +441,6 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         accColor.g = currentOpacity*currentColor.g + (1- currentOpacity)*previousColor.g; //currentColor.g
         accColor.b = currentOpacity*currentColor.b + (1- currentOpacity)*previousColor.b; //currentColor.b
         //accColor.a = currentOpacity + (1 - currentOpacity)*previousColor.a;
-        
         return accColor;
     }
 
@@ -467,10 +466,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         TFColor color;
 
         //fish doesn't exist
-        if (gradient.x == 0 && gradient.y == 0 && gradient.z == 0) {
-            return voxel_color;
-        }
-        
+        //if (gradient.x == 0 && gradient.y == 0 && gradient.z == 0) return voxel_color; 
         if(gradient.mag == 0)   return voxel_color;
 
         //norm gradiente
@@ -478,12 +474,12 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
 
         //norm light
         double lightNorm = VectorMath.length(lightVector);  //Math.sqrt(Math.pow(lightVector[0], 2) + Math.pow(lightVector[1], 2) + Math.pow(lightVector[2], 2));
+        if(lightNorm == 0) return voxel_color;
         double[] lightNormVector = {lightVector[0] / lightNorm, lightVector[1] / lightNorm, lightVector[2] / lightNorm};
 
         //norm ray
         double rayNorm = VectorMath.length(rayVector);  //Math.sqrt(Math.pow(rayVector[0], 2) + Math.pow(rayVector[1], 2) + Math.pow(rayVector[2], 2));
         if(rayNorm == 0) return voxel_color;
-        
         double[] rayNormVector = {rayVector[0] / rayNorm, rayVector[1] / rayNorm, rayVector[2] / rayNorm};
 
         //cos 1
@@ -519,7 +515,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
             b = 1;
         }
        
-        color = new TFColor(r, g, b, 1);
+        color = new TFColor(r, g, b, voxel_color.a);
         return color;
     }
 

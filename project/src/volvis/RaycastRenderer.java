@@ -275,7 +275,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         int found_Value=0;
         float iso_half;
         
-        double[] teste = {currentPos[0], currentPos[1], currentPos[2]};
+        //double[] teste = {currentPos[0], currentPos[1], currentPos[2]};
                         
         double[] previousPos = {currentPos[0] - increments[0], currentPos[1] - increments[1], currentPos[2] - increments[2]};
            
@@ -350,7 +350,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
             voxel_color.b = accColor.b;
             
             if (accColor.r > 0 || accColor.g > 0 || accColor.b > 0) {
-                opacity = 1;
+                opacity = accColor.a;
             }
         }
 
@@ -440,7 +440,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         accColor.r = currentOpacity*currentColor.r + (1- currentOpacity)*previousColor.r; //currentColor.r
         accColor.g = currentOpacity*currentColor.g + (1- currentOpacity)*previousColor.g; //currentColor.g
         accColor.b = currentOpacity*currentColor.b + (1- currentOpacity)*previousColor.b; //currentColor.b
-        //accColor.a = currentOpacity + (1 - currentOpacity)*previousColor.a;
+        accColor.a = currentOpacity + (1 - currentOpacity)*previousColor.a;
         return accColor;
     }
 
@@ -633,6 +633,8 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
 
         return opacity;
     }*/
+    
+    /*
     public double computeOpacity2DTF(double material_value, double material_r,
             double voxelValue, double gradMagnitude) {
 
@@ -644,20 +646,28 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         double h=0.0;
         double area=0.0;
         
+        //absolute value
         if (voxelValue > material_value) {
             voxelRad = voxelValue - material_value;
         } else {
             voxelRad = material_value - voxelValue;
         }
 
-        l = TriRad - voxelRad;
-        h = gradMagnitude - gradMagnitude*voxelRad/TriRad;
-        area = l*h;
-
-        if(voxelRad < TriRad){
-            opacity =(1/(173.1*material_r)) * area;
+        if(TriRad==0){
+          h=gradMagnitude;
+          opacity = h/173.1;
         }
+        else{}
         
+            l = TriRad - voxelRad;
+            h = gradMagnitude - gradMagnitude*voxelRad/TriRad;
+            //System.out.println("h" + h);
+            area = l*h;
+
+            if(voxelRad < TriRad){
+                opacity =(1/(173.1*material_r)) * area;
+            }
+       
         /*if(gradMagnitude==0 && voxelRad==TriRad)
             opacity=1;
         else if((gradMagnitude>0) && (voxelRad - TriRad*gradMagnitude < TriRad) && (voxelRad + TriRad*gradMagnitude > TriRad))
@@ -680,10 +690,32 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
             opacity = 1.0 - Math.abs((material_value - voxelValue) / (gradMagnitude * material_r)); //levoy
         }*/
 
-        //System.out.println(opacity);
+       /*System.out.println(opacity);
         return opacity;
         
+    }*/
+    
+    public double computeOpacity2DTF(short intensity,double radius, double voxelValue, double gradMagnitude) {
+    //init opacity to 0 (=transparent)
+    double opacity = 0.0;
+    
+
+    //arctan of O/A gives us angle in radians
+    double angle = Math.atan(radius/gradients.getMaxGradientMagnitude());
+    
+    //trigonometrics: calculate angle that current voxel makes with base intensity center
+    double opposite = Math.abs(voxelValue-intensity);
+    double adjacent = gradMagnitude;
+    double voxelAngle = Math.atan(opposite/adjacent);
+    
+    //if the voxel is inside the triangle from the widget, make it opaque
+    if(voxelAngle < angle){
+        //the factor voxelAngle/angle is used as a ramp
+        opacity = voxelAngle/angle*tFunc2D.color.a;  
     }
+     
+    return opacity;
+} 
 
     //////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////

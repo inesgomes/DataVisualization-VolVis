@@ -435,7 +435,8 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         if(shadingMode){
             currentColor = computePhongShading(currentColor, this.gradients.getGradient(currentPos), lightVector, rayVector);
         }
-
+        
+        //Use accumulated color formula (back to front approach)
         TFColor accColor = new TFColor();
         accColor.r = currentOpacity*currentColor.r + (1- currentOpacity)*previousColor.r; //currentColor.r
         accColor.g = currentOpacity*currentColor.g + (1- currentOpacity)*previousColor.g; //currentColor.g
@@ -615,103 +616,25 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
 // triangle widget tFunc2D contains the values of the baseintensity and radius
 // tFunc2D.baseIntensity, tFunc2D.radius they are in image intensity units
 
-    /*public double computeOpacity2DTF(double material_value, double material_r,
-        double voxelValue, double gradMagnitude) {
-        
-        double opacity = 0.0;
-        double TriRad = voxelValue*material_r/173.1;
-        
-        double voxelRad = 0.0;
-        
-        if(voxelValue>material_value)
-            voxelRad = voxelValue - material_value;
-        else 
-            voxelRad = material_value - voxelValue;
-        
-        if(voxelRad<TriRad)
-            opacity = 0.5;    
 
-        return opacity;
-    }*/
-    
-    /*
-    public double computeOpacity2DTF(double material_value, double material_r,
-            double voxelValue, double gradMagnitude) {
-
-        double opacity = 0.0;
-        double TriRad = gradMagnitude * material_r / 173.1;
-
-        double voxelRad = 0.0;
-        double l=0.0;
-        double h=0.0;
-        double area=0.0;
-        
-        //absolute value
-        if (voxelValue > material_value) {
-            voxelRad = voxelValue - material_value;
-        } else {
-            voxelRad = material_value - voxelValue;
-        }
-
-        if(TriRad==0){
-          h=gradMagnitude;
-          opacity = h/173.1;
-        }
-        else{}
-        
-            l = TriRad - voxelRad;
-            h = gradMagnitude - gradMagnitude*voxelRad/TriRad;
-            //System.out.println("h" + h);
-            area = l*h;
-
-            if(voxelRad < TriRad){
-                opacity =(1/(173.1*material_r)) * area;
-            }
-       
-        /*if(gradMagnitude==0 && voxelRad==TriRad)
-            opacity=1;
-        else if((gradMagnitude>0) && (voxelRad - TriRad*gradMagnitude < TriRad) && (voxelRad + TriRad*gradMagnitude > TriRad))
-            if(TriRad>voxelValue)
-                opacity=1-(1/TriRad)*(TriRad-voxelRad)/gradMagnitude;
-            else
-                opacity=1-(1/TriRad)*(voxelRad-TriRad)/gradMagnitude;
-        else
-            opacity=0;*/
-        
-                //kniss et al.  - tried this but triangle functionality was commented out. Hence, used Gooch tone shading
-        /*
-        opacity = 0.0;
-        if (gradMagnitude == 0.0 && voxelValue == material_value) {
-            opacity = 1;
-        } else if (gradMagnitude > 0.0 
-                && voxelValue - material_r * gradMagnitude <= material_value
-                && material_value <= voxelValue + material_r * gradMagnitude) {
-
-            opacity = 1.0 - Math.abs((material_value - voxelValue) / (gradMagnitude * material_r)); //levoy
-        }*/
-
-       /*System.out.println(opacity);
-        return opacity;
-        
-    }*/
     
     public double computeOpacity2DTF(short intensity,double radius, double voxelValue, double gradMagnitude) {
-    //init opacity to 0 (=transparent)
+    //init opacity with 0
     double opacity = 0.0;
     
 
-    //arctan of O/A gives us angle in radians
+    //angle of the widget
     double angle = Math.atan(radius/gradients.getMaxGradientMagnitude());
     
-    //trigonometrics: calculate angle that current voxel makes with base intensity center
-    double opposite = Math.abs(voxelValue-intensity);
-    double adjacent = gradMagnitude;
-    double voxelAngle = Math.atan(opposite/adjacent);
+    //angle of current voxel with respect to base intensity center
+    double voxelRad = Math.abs(voxelValue-intensity);
+    double voxelGradMag = gradMagnitude;
+    double voxelAngle = Math.atan(voxelRad/voxelGradMag);
     
-    //if the voxel is inside the triangle from the widget, make it opaque
+    //if the voxel is inside the widget, give it an opacity
     if(voxelAngle < angle){
-        //the factor voxelAngle/angle is used as a ramp
-        opacity = voxelAngle/angle*tFunc2D.color.a;  
+        //the factor between the angles is used as a ramp
+        opacity = (1 - (voxelAngle/angle))*tFunc2D.color.a;  
     }
      
     return opacity;
